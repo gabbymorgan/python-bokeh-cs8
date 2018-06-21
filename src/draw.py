@@ -2,7 +2,7 @@ import math
 
 from bokeh.io import show, output_file
 from bokeh.plotting import figure
-from bokeh.models import GraphRenderer, StaticLayoutProvider, Oval, LabelSet
+from bokeh.models import GraphRenderer, StaticLayoutProvider, Circle, ColumnDataSource, LabelSet, Label
 from bokeh.palettes import Spectral8
 
 from graph import *
@@ -19,8 +19,6 @@ for vertex in graph_data.vertexes:
     color_list.append(vertex.color)
 
 values = [x.value for x in graph_data.vertexes]
-print(values)
-
 debug_pallete = Spectral8
 debug_pallete.append('#ff0000')
 debug_pallete.append('#0000ff')
@@ -33,18 +31,31 @@ graph = GraphRenderer()
 graph.node_renderer.data_source.add(node_indices, 'index')
 graph.node_renderer.data_source.add(color_list, 'color')
 graph.node_renderer.data_source.add(values, 'value')
-graph.node_renderer.glyph = Oval(name='value', height=10, width=10, fill_color='color')
+graph.node_renderer.glyph = Circle(name='value', radius=10, fill_color='color')
 
-# labels = LabelSet(x='weight', y='height', text='names', level='glyph',
-#               x_offset=5, y_offset=5, source=source, render_mode='canvas')
+start = []
+end = []
+for vertex in graph_data.vertexes:
+    for edge in vertex.edges:
+        start.append(vertex.value)
+        end.append(edge.destination.value)
 
 graph.edge_renderer.data_source.data = dict(
-    start=node_indices,
-    end=[graph_data.vertexes[x].edges[0].destination.value for x in node_indices])
+    start=start,
+    end=end)
 
 ### start of layout code
 x = [v.pos['x'] for v in graph_data.vertexes]
 y = [v.pos['y'] for v in graph_data.vertexes]
+
+source = ColumnDataSource(data=dict(x_pos=x,
+                                    y_pos=y,
+                                    names=values))
+
+labels = LabelSet(x='x_pos', y='y_pos', text='names', level='glyph',
+        x_offset=0, y_offset=20, source=source, render_mode='canvas')
+
+plot.add_layout(labels)
 
 graph_layout = dict(zip(node_indices, zip(x, y)))
 graph.layout_provider = StaticLayoutProvider(graph_layout=graph_layout)
